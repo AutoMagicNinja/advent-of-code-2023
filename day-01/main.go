@@ -18,7 +18,7 @@ var (
 
 func init() {
 	flag.StringVar(&inputFilename, "input", "", "Input filename")
-	logger = slog.New(slog.NewTextHandler(os.Stdout, &slog.HandlerOptions{Level: slog.LevelInfo}))
+	logger = slog.New(slog.NewTextHandler(os.Stdout, &slog.HandlerOptions{Level: slog.LevelWarn}))
 }
 
 func firstStar(lines []string) {

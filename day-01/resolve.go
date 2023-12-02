@@ -3,9 +3,10 @@ package main
 import (
 	"fmt"
 	"maps"
-	"regexp"
 	"strconv"
 	"unicode"
+
+	"github.com/dlclark/regexp2"
 )
 
 func getFirstLastUnicodeDigitIndices(line []rune) (int, int) {
@@ -52,20 +53,42 @@ func convertToDigit(s string) int {
 	return -1
 }
 
-func getSpelledOutNumberLocations(line string) (results map[int]int) {
+// returns map[starting_index]captured_string
+func getAllCaptures(pattern *regexp2.Regexp, str []rune) (matches map[int]string, err error) {
+	var match *regexp2.Match
+	match, err = pattern.FindRunesMatch(str)
+	matches = make(map[int]string)
+	for err == nil && match != nil {
+		for gCt, group := range match.Groups() {
+			for cCt, capture := range group.Captures {
+				logger.Debug(fmt.Sprintf("type=match; str=%s gCt=%d; cCt=%d; idx=%d; len=%d; s=%s", string(str), gCt, cCt, capture.Index, capture.Length, capture.String()))
+				if capture.Length > 0 {
+					matches[capture.Index] = capture.String()
+				}
+			}
+		}
+		match, err = pattern.FindNextMatch(match)
+	}
+	return
+}
+
+func getSpelledOutNumberLocations(line []rune) (results map[int]int) {
 	var (
-		spelledOutNumberRE                     = regexp.MustCompile(`one|two|three|four|five|six|seven|eight|nine`)
-		allMatchIdx                            = spelledOutNumberRE.FindAllIndex([]byte(line), -1)
-		matchStart, matchEnd, conversionResult int
+		spelledOutNumberRE = regexp2.MustCompile(`(?=(one|two|three|four|five|six|seven|eight|nine))`, regexp2.RE2)
+		allMatches, err    = getAllCaptures(spelledOutNumberRE, line)
+		conversionResult   int
 	)
+	if err != nil {
+		panic(err)
+	}
+	logger.Debug(fmt.Sprintf("type=word; line=%s; matchCount=%d;", string(line), len(allMatches)))
 	results = make(map[int]int)
-	for matchNum, matchRange := range allMatchIdx {
-		matchStart, matchEnd = matchRange[0], matchRange[1]
-		matchString := string([]rune(line)[matchStart:matchEnd])
-		conversionResult = convertToDigit(matchString)
-		logger.Debug(fmt.Sprintf("type=word; line=%s; matchNum=%d; start=%d; end=%d; match=%s; result=%d;", line, matchNum, matchStart, matchEnd, matchString, conversionResult))
+	for matchIdx, eachMatch := range allMatches {
+		conversionResult = convertToDigit(eachMatch)
+		logger.Debug(fmt.Sprintf("type=word; line=%s; start=%d; match=%s; result=%d;",
+			string(line), matchIdx, eachMatch, conversionResult))
 		if conversionResult > 0 {
-			results[matchStart] = conversionResult
+			results[matchIdx] = conversionResult
 		}
 	}
 
@@ -109,7 +132,7 @@ func resolveNumberByMixedDigitsAndWords(line string) (result int, err error) {
 	logger.Debug(fmt.Sprintf("line=%s; Runes=%#v", line, unicodeLocations))
 	maps.Copy[map[int]int](locations, unicodeLocations)
 
-	wordLocations := getSpelledOutNumberLocations(line)
+	wordLocations := getSpelledOutNumberLocations([]rune(line))
 	logger.Debug(fmt.Sprintf("line=%s; Words=%#v", line, wordLocations))
 	maps.Copy[map[int]int](locations, wordLocations)
 
