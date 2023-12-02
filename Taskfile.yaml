@@ -1,0 +1,64 @@
+# https://taskfile.dev
+
+version: "3"
+
+output: prefixed
+silent: false
+
+vars:
+  BIN_NAME: advent
+
+env:
+  GOPRIVATE: github.com/automagicninja/advent-of-code-2023
+
+tasks:
+  default:
+    cmds:
+      - { task: build }
+      - { task: test }
+    silent: true
+
+  new-day:
+    cmds:
+      - cp -av _template {{.CLI_ARGS}}
+      - cd {{.CLI_ARGS}} && go mod init {{.GOPRIVATE}}/{{.CLI_ARGS}}
+      - cd {{.CLI_ARGS}} && task deps
+    generates:
+      - "{{.CLI_ARGS}}"
+
+  deps:
+    cmds:
+      - go mod tidy
+      - go get -u -t ./...
+      - go vet ./...
+    sources:
+      - "*.go"
+      - "**/*.go"
+
+  build:
+    cmds:
+      - { task: deps }
+      - go generate ./...
+      - go build -o "{{.BIN_NAME}}"
+    sources:
+      - "*.go"
+      - "**/*.go"
+
+  test:
+    deps:
+      - build
+    cmds:
+      - go test ./...
+      - ./{{.BIN_NAME}} --input test.txt
+    sources:
+      - "*.go"
+      - "**/*.go"
+      - "*_test.go"
+      - "**/*_test.go"
+
+  run:
+    deps:
+      - build
+    cmds:
+      # - ./{{.BIN_NAME}} {{.CLI_ARGS}}
+      - ./{{.BIN_NAME}} --input input.txt
