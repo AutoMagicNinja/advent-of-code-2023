@@ -37,6 +37,24 @@ func firstStar(lines []string) {
 	logger.Info(fmt.Sprintf("first star: %d", answer))
 }
 
+func secondStar(lines []string) {
+	var (
+		answer     int
+		err        error
+		lineResult int
+	)
+
+	for lineNumber, eachLine := range lines {
+		lineResult, err = resolveNumberByMixedDigitsAndWords(eachLine)
+		if err != nil {
+			logger.Error(fmt.Sprintf("lineno: %d, line: %#v, result: %d; err: %s", lineNumber, eachLine, lineResult, err.Error()))
+		}
+		answer += lineResult
+	}
+
+	logger.Warn(fmt.Sprintf("second star: %d", answer))
+}
+
 func main() {
 	var (
 		err     error
@@ -54,5 +72,6 @@ func main() {
 	}
 
 	lines = strings.Split(strings.TrimSpace(string(rawData)), "\n")
-	firstStar(lines)
+	// firstStar(lines)
+	secondStar(lines)
 }
